@@ -23,25 +23,45 @@ jobs:
           Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd123!" -Force)
           Write-Host "✅ Password Configured!"
 
-      - name: Start Cloudflare Tunnel
-        run: |
-          Write-Host "============================================"
-          Write-Host "🚀 WINDOWS RDP - CLOUDFLARE TUNNEL"
-          Write-Host "============================================"
-          Write-Host ""
-          Start-Process PowerShell -ArgumentList '-NoExit -Command "cloudflared tunnel --url tcp://localhost:3389"'
-          Start-Sleep -Seconds 15
-          Write-Host ""
-          Write-Host "✅ TUNNEL STARTED! Check separate PowerShell window for URL"
-          Write-Host ""
-          Write-Host "📋 CONNECTION DETAILS:"
-          Write-Host "   USERNAME: runneradmin"
-          Write-Host "   PASSWORD: P@ssw0rd123!"
-          Write-Host "   OS: Windows Server 2022"
-          Write-Host "   CPU: 4 cores"
-          Write-Host "   RAM: 16GB"
-          Write-Host "============================================"
-
+      - - name: Start Cloudflare Tunnel
+  run: |
+    Write-Host "============================================"
+    Write-Host "🚀 WINDOWS RDP - CLOUDFLARE TUNNEL"
+    Write-Host "============================================"
+    Write-Host ""
+    
+    # Start tunnel and capture output
+    $logFile = "tunnel.log"
+    Start-Process -NoNewWindow -FilePath "cloudflared" -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput $logFile -RedirectStandardError $logFile
+    
+    Write-Host "⏳ Waiting for tunnel to establish..."
+    Start-Sleep -Seconds 20
+    
+    # Extract URL from log
+    $logContent = Get-Content $logFile -ErrorAction SilentlyContinue
+    $url = $logContent | Select-String -Pattern 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' | Select-Object -First 1
+    $tcpUrl = $logContent | Select-String -Pattern 'tcp://[a-zA-Z0-9-]+\.trycloudflare\.com:\d+' | Select-Object -First 1
+    
+    Write-Host ""
+    Write-Host "============================================"
+    Write-Host "🔗 CLOUDFLARE URL: $($url.Matches.Value)"
+    Write-Host "🔗 TCP ADDRESS: $($tcpUrl.Matches.Value)"
+    Write-Host ""
+    Write-Host "📋 CONNECTION DETAILS:"
+    Write-Host "   USERNAME: runneradmin"
+    Write-Host "   PASSWORD: P@ssw0rd123!"
+    Write-Host "   OS: Windows Server 2022"
+    Write-Host "   CPU: 4 cores"
+    Write-Host "   RAM: 16GB"
+    Write-Host "============================================"
+    Write-Host ""
+    Write-Host "📱 For Mobile RDP: Use the TCP ADDRESS above"
+    Write-Host "   Example: 0.tcp.ngrok.io:12345 format"
+    Write-Host ""
+    
+    # Keep tunnel running
+    Get-Content $logFile -Wait
+    
       - name: Keep Session Alive
         run: |
           Write-Host "⏳ Session Active - Keeping alive..."
