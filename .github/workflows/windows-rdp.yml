@@ -29,13 +29,14 @@ jobs:
           Write-Host "🚀 WINDOWS RDP - CLOUDFLARE TUNNEL"
           Write-Host "============================================"
           Write-Host ""
-          $logFile = "tunnel.log"
-          Start-Process -NoNewWindow -FilePath "cloudflared" -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput $logFile -RedirectStandardError $logFile
+          Start-Process -NoNewWindow -FilePath "cloudflared" -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardOutput "stdout.log" -RedirectStandardError "stderr.log"
           Write-Host "⏳ Waiting for tunnel to establish..."
           Start-Sleep -Seconds 20
-          $logContent = Get-Content $logFile -ErrorAction SilentlyContinue
-          $url = $logContent | Select-String -Pattern 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' | Select-Object -First 1
-          $tcpUrl = $logContent | Select-String -Pattern 'tcp://[a-zA-Z0-9-]+\.trycloudflare\.com:\d+' | Select-Object -First 1
+          $stdout = Get-Content "stdout.log" -ErrorAction SilentlyContinue
+          $stderr = Get-Content "stderr.log" -ErrorAction SilentlyContinue
+          $allLogs = $stdout + $stderr
+          $url = $allLogs | Select-String -Pattern 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' | Select-Object -First 1
+          $tcpUrl = $allLogs | Select-String -Pattern 'tcp://[a-zA-Z0-9-]+\.trycloudflare\.com:\d+' | Select-Object -First 1
           Write-Host ""
           Write-Host "============================================"
           Write-Host "🔗 CLOUDFLARE URL: $($url.Matches.Value)"
